@@ -3,11 +3,11 @@ const path = require('path');
 const fs = require('fs');
 const crypto = require('crypto-js');
 const http = require('http');
-const WebSocket = require('ws');
+const { Server } = require('socket.io');
 
 const app = express();
 const server = http.createServer(app);
-const wss = new WebSocket.Server({ server });
+const io = new Server(server);
 
 const port = 5200;
 const wishesFile = path.join(__dirname, 'wishes.json');
@@ -75,11 +75,7 @@ app.post('/wishes', (req, res) => {
     writeToFile(wishes);
 
     // Broadcast the new wish to all connected clients
-    wss.clients.forEach(client => {
-      if (client.readyState === WebSocket.OPEN) {
-        client.send(JSON.stringify({ username, wish, token }));
-      }
-    });
+    io.emit('newWish', { username, wish, token });
 
     res.json({ success: true });
   } catch (error) {
@@ -107,11 +103,7 @@ app.put('/wishes', (req, res) => {
       writeToFile(wishes);
 
       // Broadcast the updated wish to all connected clients
-      wss.clients.forEach(client => {
-        if (client.readyState === WebSocket.OPEN) {
-          client.send(JSON.stringify({ username: wishes[wishIndex].username, wish: newWish, token }));
-        }
-      });
+      io.emit('updateWish', { username: wishes[wishIndex].username, wish: newWish, token });
 
       res.json({ success: true });
     } else {
@@ -125,4 +117,11 @@ app.put('/wishes', (req, res) => {
 
 server.listen(port, () => {
   console.log(`Server running at http://localhost:${port}`);
+});
+
+io.on('connection', (socket) => {
+  console.log('A user connected');
+  socket.on('disconnect', () => {
+    console.log('User disconnected');
+  });
 });

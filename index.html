@@ -5,6 +5,9 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Responsive Birthday Card</title>
   <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+  <script src="/socket.io/socket.io.js"></script>
+  <link href="/public/css/output.css" rel="stylesheet">
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@600&display=swap');
 
@@ -76,6 +79,7 @@
       100% { transform: rotate(360deg); }
     }
   </style>
+  <link href="/css/output.css" rel="stylesheet">
 </head>
 <body>
   <!-- Glass Card -->
@@ -360,48 +364,45 @@
       showSlides(); // Show the first slide immediately
     });
   </script>
-  <!-- Add this script before the closing </body> tag -->
   <script>
-    const ws = new WebSocket('ws://localhost:5200');
+    const socket = io();
 
-    ws.onmessage = (event) => {
-      const wish = JSON.parse(event.data);
+    socket.on('newWish', (wish) => {
       const wishContainer = document.getElementById('user-wishes');
-      const existingWish = document.querySelector(`[data-token="${wish.token}"]`);
+      const newWish = document.createElement('div');
+      newWish.classList.add(
+        'bg-white/40',
+        'backdrop-blur-lg',
+        'p-6',
+        'rounded-lg',
+        'shadow-lg',
+        'text-center',
+        'space-y-3',
+        'mb-4',
+        'flex',
+        'flex-col',
+        'items-center',
+        'justify-center'
+      );
+      newWish.setAttribute('data-token', wish.token);
+      newWish.innerHTML = `
+        <div class="text-pink-500 text-3xl mb-2">
+          <i class="fas fa-birthday-cake"></i>
+        </div>
+        <p class="text-sm sm:text-base text-gray-600 font-semibold">${wish.username} says:</p>
+        <p class="wish-text text-sm sm:text-base text-gray-600">${wish.wish}</p>
+        <p class="text-xs text-gray-400">Sent at: ${new Date().toLocaleTimeString()}</p>
+        <button onclick="editWish(this, '${wish.token}')" class="bg-pink-500 text-white px-4 py-2 rounded-lg text-xs">Edit</button>
+      `;
+      wishContainer.appendChild(newWish);
+    });
 
+    socket.on('updateWish', (wish) => {
+      const existingWish = document.querySelector(`[data-token="${wish.token}"]`);
       if (existingWish) {
-        // Update existing wish
         existingWish.querySelector('.wish-text').textContent = wish.wish;
-      } else {
-        // Add new wish
-        const newWish = document.createElement('div');
-        newWish.classList.add(
-          'bg-white/40',
-          'backdrop-blur-lg',
-          'p-6',
-          'rounded-lg',
-          'shadow-lg',
-          'text-center',
-          'space-y-3',
-          'mb-4',
-          'flex',
-          'flex-col',
-          'items-center',
-          'justify-center'
-        );
-        newWish.setAttribute('data-token', wish.token);
-        newWish.innerHTML = `
-          <div class="text-pink-500 text-3xl mb-2">
-            <i class="fas fa-birthday-cake"></i>
-          </div>
-          <p class="text-sm sm:text-base text-gray-600 font-semibold">${wish.username} says:</p>
-          <p class="wish-text text-sm sm:text-base text-gray-600">${wish.wish}</p>
-          <p class="text-xs text-gray-400">Sent at: ${new Date().toLocaleTimeString()}</p>
-          <button onclick="editWish(this, '${wish.token}')" class="bg-pink-500 text-white px-4 py-2 rounded-lg text-xs">Edit</button>
-        `;
-        wishContainer.appendChild(newWish);
       }
-    };
+    });
 
     // Function to show the progress bar
     function showProgressBar() {
@@ -426,19 +427,22 @@
 
         showProgressBar(); // Show progress bar
 
-        const response = await fetch('/wishes', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({ username, wish: userWish, token: userToken })
-        });
+        try {
+          const response = await axios.post('/wishes', {
+            username,
+            wish: userWish,
+            token: userToken
+          });
 
-        hideProgressBar(); // Hide progress bar
+          hideProgressBar(); // Hide progress bar
 
-        if (response.ok) {
-          document.getElementById('username').value = ''; // Clear username input
-          document.getElementById('user-wish').value = ''; // Clear wish input
+          if (response.status === 200) {
+            document.getElementById('username').value = ''; // Clear username input
+            document.getElementById('user-wish').value = ''; // Clear wish input
+          }
+        } catch (error) {
+          console.error('Error adding wish:', error);
+          hideProgressBar(); // Hide progress bar
         }
       }
     }
@@ -449,20 +453,23 @@
       if (newWish !== '') {
         showProgressBar(); // Show progress bar
 
-        const response = await fetch('/wishes', {
-          method: 'PUT',
-          headers: {
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({ token: currentEditToken, newWish })
-        });
+        try {
+          const response = await axios.put('/wishes', {
+            token: currentEditToken,
+            newWish
+          });
 
-        hideProgressBar(); // Hide progress bar
+          hideProgressBar(); // Hide progress bar
 
-        if (response.ok) {
-          closeEditModal();
-        } else {
+          if (response.status === 200) {
+            closeEditModal();
+          } else {
+            showModal('Failed to update the wish.');
+          }
+        } catch (error) {
+          console.error('Error updating wish:', error);
           showModal('Failed to update the wish.');
+          hideProgressBar(); // Hide progress bar
         }
       }
     }
