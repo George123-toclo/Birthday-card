@@ -1,15 +1,20 @@
 {
   "name": "birthday-card",
   "version": "1.0.0",
-  "description": "Responsive Birthday Card Web App This project is a responsive and interactive birthday card web app, designed to showcase a birthday countdown, display birthday wishes, and show a sliding image gallery. It is built using HTML, CSS, and JavaScript with TailwindCSS for styling.",
-  "main": "index.js",
+  "description": "",
+  "main": "server.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "start": "node server.js",
+    "dev": "nodemon server.js"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "express": "^4.21.2"
+    "crypto-js": "^4.0.0",
+    "express": "^4.17.1"
+  },
+  "devDependencies": {
+    "nodemon": "^2.0.7"
   }
 }

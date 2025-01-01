@@ -8,6 +8,11 @@
   <script>
     let totalWishes = 0; // Counter for total wishes
 
+    // Generate a unique token for the user
+    function generateToken() {
+      return Math.random().toString(36).substr(2);
+    }
+
     // Countdown Timer and Birthday Status
     function startCountdown() {
       const now = new Date();
@@ -42,16 +47,12 @@
       }, 1000);
     }
 
-    // Function to add user wishes
-    function addWish() {
-      const username = document.getElementById('username').value.trim();
-      const userWish = document.getElementById('user-wish').value.trim();
-      if (username && userWish) {
-        totalWishes++; // Increment the total wishes counter
-        updateWishCount();
-
-        const timeSent = new Date().toLocaleTimeString();
-        const wishContainer = document.getElementById('user-wishes');
+    // Function to fetch and display wishes
+    async function fetchWishes() {
+      const response = await fetch('/wishes');
+      const wishes = await response.json();
+      const wishContainer = document.getElementById('user-wishes');
+      wishes.forEach(wish => {
         const newWish = document.createElement('div');
         newWish.classList.add(
           'bg-white/40',
@@ -71,24 +72,97 @@
           <div class="text-pink-500 text-3xl mb-2">
             <i class="fas fa-birthday-cake"></i>
           </div>
-          <p class="text-sm sm:text-base text-gray-600 font-semibold">${username} says:</p>
-          <p class="wish-text text-sm sm:text-base text-gray-600">${userWish}</p>
-          <p class="text-xs text-gray-400">Sent at: ${timeSent}</p>
-          <button onclick="editWish(this)" class="bg-pink-500 text-white px-4 py-2 rounded-lg text-xs">Edit</button>
+          <p class="text-sm sm:text-base text-gray-600 font-semibold">${wish.username} says:</p>
+          <p class="wish-text text-sm sm:text-base text-gray-600">${wish.wish}</p>
+          <p class="text-xs text-gray-400">Sent at: ${new Date().toLocaleTimeString()}</p>
+          <button onclick="editWish(this, '${wish.token}')" class="bg-pink-500 text-white px-4 py-2 rounded-lg text-xs">Edit</button>
         `;
         wishContainer.appendChild(newWish);
-        document.getElementById('username').value = ''; // Clear username input
-        document.getElementById('user-wish').value = ''; // Clear wish input
+      });
+      totalWishes = wishes.length;
+      updateWishCount();
+    }
+
+    // Function to add user wishes
+    async function addWish() {
+      const username = document.getElementById('username').value.trim();
+      const userWish = document.getElementById('user-wish').value.trim();
+      if (username && userWish) {
+        let userToken = localStorage.getItem('userToken');
+        if (!userToken) {
+          userToken = generateToken();
+          localStorage.setItem('userToken', userToken);
+        }
+
+        const response = await fetch('/wishes', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ username, wish: userWish, token: userToken })
+        });
+
+        if (response.ok) {
+          totalWishes++; // Increment the total wishes counter
+          updateWishCount();
+
+          const timeSent = new Date().toLocaleTimeString();
+          const wishContainer = document.getElementById('user-wishes');
+          const newWish = document.createElement('div');
+          newWish.classList.add(
+            'bg-white/40',
+            'backdrop-blur-lg',
+            'p-6',
+            'rounded-lg',
+            'shadow-lg',
+            'text-center',
+            'space-y-3',
+            'mb-4',
+            'flex',
+            'flex-col',
+            'items-center',
+            'justify-center'
+          );
+          newWish.innerHTML = `
+            <div class="text-pink-500 text-3xl mb-2">
+              <i class="fas fa-birthday-cake"></i>
+            </div>
+            <p class="text-sm sm:text-base text-gray-600 font-semibold">${username} says:</p>
+            <p class="wish-text text-sm sm:text-base text-gray-600">${userWish}</p>
+            <p class="text-xs text-gray-400">Sent at: ${timeSent}</p>
+            <button onclick="editWish(this, '${userToken}')" class="bg-pink-500 text-white px-4 py-2 rounded-lg text-xs">Edit</button>
+          `;
+          wishContainer.appendChild(newWish);
+          document.getElementById('username').value = ''; // Clear username input
+          document.getElementById('user-wish').value = ''; // Clear wish input
+        }
       }
     }
 
     // Function to edit an existing wish
-    function editWish(button) {
+    async function editWish(button, token) {
       const wishContainer = button.parentElement;
       const wishTextElement = wishContainer.querySelector('.wish-text');
       const newWish = prompt('Edit your wish:', wishTextElement.textContent);
       if (newWish !== null && newWish.trim() !== '') {
-        wishTextElement.textContent = newWish.trim();
+        const userToken = localStorage.getItem('userToken');
+        if (userToken === token) {
+          const response = await fetch('/wishes', {
+            method: 'PUT',
+            headers: {
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ token, newWish: newWish.trim() })
+          });
+
+          if (response.ok) {
+            wishTextElement.textContent = newWish.trim();
+          } else {
+            alert('Failed to update the wish.');
+          }
+        } else {
+          alert('You can only edit your own wish.');
+        }
       }
     }
 
@@ -97,7 +171,10 @@
       document.getElementById('wish-count').textContent = `Total Wishes: ${totalWishes}`;
     }
 
-    window.onload = startCountdown;
+    window.onload = () => {
+      startCountdown();
+      fetchWishes();
+    };
   </script>
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@600&display=swap');
