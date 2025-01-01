@@ -5,8 +5,131 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Responsive Birthday Card</title>
   <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@600&display=swap');
+
+    body {
+      font-family: 'Poppins', sans-serif;
+      background: linear-gradient(to bottom right, #fbc2eb, #a18cd1, #a1c4fd, #c2e59c);
+      background-attachment: fixed;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 1rem;
+    }
+
+    .fade-slide {
+      display: flex;
+      position: relative;
+      overflow: hidden;
+      border-radius: 1rem;
+    }
+
+    .fade-slide img {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      opacity: 0;
+      transition: opacity 1.5s ease-in-out;
+    }
+
+    .fade-slide img.active {
+      opacity: 1;
+    }
+
+    .blurred {
+      filter: blur(5px);
+    }
+
+    .modal {
+      width: 90%;
+      max-width: 500px;
+    }
+
+    .modal textarea {
+      border: 1px solid #d1d5db; /* Tailwind gray-300 */
+    }
+  </style>
+</head>
+<body>
+  <!-- Glass Card -->
+  <div id="main-content" class="relative bg-white/30 backdrop-blur-lg shadow-lg rounded-xl p-6 sm:p-8 w-full max-w-md sm:max-w-lg md:max-w-xl text-center">
+
+    <!-- Image Slider -->
+    <div class="fade-slide h-56 sm:h-64 md:h-72 mb-4">
+      <img src="FB_IMG_1735708208977.jpg" alt="Slide 1" class="active">
+      <img src="FB_IMG_1733355354534.jpg" alt="Slide 2">
+      <img src="FB_IMG_1733355385479.jpg" alt="Slide 3">
+    </div>
+
+    <!-- User Info Section -->
+    <div class="text-center space-y-2 mb-4">
+      <h2 class="text-lg sm:text-xl md:text-2xl font-bold text-gray-800">🎉 Happy Birthday, Elizabeth Blay Torbor! 🎂</h2>
+      <p class="text-xs sm:text-sm text-gray-600">Birthday: January 2</p>
+      <p id="birthday-status" class="text-sm sm:text-base font-medium text-pink-500 mt-2"></p>
+    </div>
+
+    <!-- Divider -->
+    <hr class="my-4" />
+
+    <!-- Countdown Section -->
+    <div class="text-center text-lg sm:text-xl font-semibold text-gray-700 mb-5">
+      <p class="mb-2">Countdown to Birthday:</p>
+      <p id="countdown" class="text-2xl text-pink-600 font-bold"></p>
+    </div>
+
+    <!-- Add Wishes Section -->
+    <div class="bg-white/40 backdrop-blur-lg p-6 rounded-lg shadow-lg space-y-4 mb-4">
+      <label for="username" class="block text-sm font-medium text-gray-700">Your Name</label>
+      <input id="username" type="text" class="w-full p-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-pink-400 text-gray-700" placeholder="Enter your name">
+      
+      <label for="user-wish" class="block text-sm font-medium text-gray-700">Your Wish</label>
+      <textarea id="user-wish" rows="4" class="w-full p-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-pink-400 text-gray-700" placeholder="Write your wish here..."></textarea>
+      
+      <button onclick="addWish()" class="w-full bg-gradient-to-r from-pink-500 to-purple-500 text-white px-4 py-2 rounded-lg focus:ring-4 focus:ring-pink-300 hover:shadow-lg">
+        Submit Wish
+      </button>
+    </div>
+
+    <!-- Total Wishes Count -->
+    <div id="wish-count" class="text-sm font-medium text-gray-600 mb-4">
+      Total Wishes: 0
+    </div>
+
+    <!-- User Submitted Wishes -->
+    <div id="user-wishes"></div>
+
+    <!-- Footer -->
+    <div class="mt-6 text-center text-xs text-gray-500">
+      <p>Created by George with love. Mum, you're the best. ❤</p>
+    </div>
+  </div>
+
+  <!-- Custom Modal -->
+  <div id="custom-modal" class="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 hidden">
+    <div class="modal bg-white p-6 rounded-lg shadow-lg text-center">
+      <p id="modal-message" class="text-gray-700"></p>
+      <button onclick="closeModal()" class="mt-4 bg-pink-500 text-white px-4 py-2 rounded-lg">OK</button>
+    </div>
+  </div>
+
+  <!-- Edit Wish Modal -->
+  <div id="edit-modal" class="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 hidden">
+    <div class="modal bg-white p-6 rounded-lg shadow-lg text-center">
+      <p class="text-gray-700 mb-4">Edit your wish:</p>
+      <textarea id="edit-wish-text" rows="4" class="w-full p-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-pink-400 text-gray-700"></textarea>
+      <button onclick="saveWish()" class="mt-4 bg-pink-500 text-white px-4 py-2 rounded-lg">Save</button>
+      <button onclick="closeEditModal()" class="mt-4 bg-gray-500 text-white px-4 py-2 rounded-lg">Cancel</button>
+    </div>
+  </div>
+
   <script>
     let totalWishes = 0; // Counter for total wishes
+    let currentEditToken = ''; // Token of the wish being edited
+    let currentWishElement = null; // Element of the wish being edited
 
     // Generate a unique token for the user
     function generateToken() {
@@ -140,28 +263,38 @@
     }
 
     // Function to edit an existing wish
-    async function editWish(button, token) {
+    function editWish(button, token) {
       const wishContainer = button.parentElement;
       const wishTextElement = wishContainer.querySelector('.wish-text');
-      const newWish = prompt('Edit your wish:', wishTextElement.textContent);
-      if (newWish !== null && newWish.trim() !== '') {
-        const userToken = localStorage.getItem('userToken');
-        if (userToken === token) {
-          const response = await fetch('/wishes', {
-            method: 'PUT',
-            headers: {
-              'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({ token, newWish: newWish.trim() })
-          });
+      const userToken = localStorage.getItem('userToken');
+      if (userToken === token) {
+        currentEditToken = token;
+        currentWishElement = wishTextElement;
+        document.getElementById('edit-wish-text').value = wishTextElement.textContent;
+        document.getElementById('edit-modal').classList.remove('hidden');
+        document.getElementById('main-content').classList.add('blurred');
+      } else {
+        showModal('You can only edit your own wish.');
+      }
+    }
 
-          if (response.ok) {
-            wishTextElement.textContent = newWish.trim();
-          } else {
-            alert('Failed to update the wish.');
-          }
+    // Function to save the edited wish
+    async function saveWish() {
+      const newWish = document.getElementById('edit-wish-text').value.trim();
+      if (newWish !== '') {
+        const response = await fetch('/wishes', {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ token: currentEditToken, newWish })
+        });
+
+        if (response.ok) {
+          currentWishElement.textContent = newWish;
+          closeEditModal();
         } else {
-          alert('You can only edit your own wish.');
+          showModal('Failed to update the wish.');
         }
       }
     }
@@ -171,102 +304,30 @@
       document.getElementById('wish-count').textContent = `Total Wishes: ${totalWishes}`;
     }
 
+    // Show custom modal with a message
+    function showModal(message) {
+      document.getElementById('modal-message').textContent = message;
+      document.getElementById('custom-modal').classList.remove('hidden');
+      document.getElementById('main-content').classList.add('blurred');
+    }
+
+    // Close the custom modal
+    function closeModal() {
+      document.getElementById('custom-modal').classList.add('hidden');
+      document.getElementById('main-content').classList.remove('blurred');
+    }
+
+    // Close the edit modal
+    function closeEditModal() {
+      document.getElementById('edit-modal').classList.add('hidden');
+      document.getElementById('main-content').classList.remove('blurred');
+    }
+
     window.onload = () => {
       startCountdown();
       fetchWishes();
     };
-  </script>
-  <style>
-    @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@600&display=swap');
 
-    body {
-      font-family: 'Poppins', sans-serif;
-      background: linear-gradient(to bottom right, #fbc2eb, #a18cd1, #a1c4fd, #c2e59c);
-      background-attachment: fixed;
-      min-height: 100vh;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      padding: 1rem;
-    }
-
-    .fade-slide {
-      display: flex;
-      position: relative;
-      overflow: hidden;
-      border-radius: 1rem;
-    }
-
-    .fade-slide img {
-      position: absolute;
-      inset: 0;
-      width: 100%;
-      height: 100%;
-      object-fit: cover;
-      opacity: 0;
-      transition: opacity 1.5s ease-in-out;
-    }
-
-    .fade-slide img.active {
-      opacity: 1;
-    }
-  </style>
-</head>
-<body>
-  <!-- Glass Card -->
-  <div class="relative bg-white/30 backdrop-blur-lg shadow-lg rounded-xl p-6 sm:p-8 w-full max-w-md sm:max-w-lg md:max-w-xl text-center">
-
-    <!-- Image Slider -->
-    <div class="fade-slide h-56 sm:h-64 md:h-72 mb-4">
-      <img src="FB_IMG_1735708208977.jpg" alt="Slide 1" class="active">
-      <img src="FB_IMG_1733355354534.jpg" alt="Slide 2">
-      <img src="FB_IMG_1733355385479.jpg" alt="Slide 3">
-    </div>
-
-    <!-- User Info Section -->
-    <div class="text-center space-y-2 mb-4">
-      <h2 class="text-lg sm:text-xl md:text-2xl font-bold text-gray-800">🎉 Happy Birthday, Elizabeth Blay Torbor! 🎂</h2>
-      <p class="text-xs sm:text-sm text-gray-600">Birthday: January 2</p>
-      <p id="birthday-status" class="text-sm sm:text-base font-medium text-pink-500 mt-2"></p>
-    </div>
-
-    <!-- Divider -->
-    <hr class="my-4" />
-
-    <!-- Countdown Section -->
-    <div class="text-center text-lg sm:text-xl font-semibold text-gray-700 mb-5">
-      <p class="mb-2">Countdown to Birthday:</p>
-      <p id="countdown" class="text-2xl text-pink-600 font-bold"></p>
-    </div>
-
-    <!-- Add Wishes Section -->
-    <div class="bg-white/40 backdrop-blur-lg p-6 rounded-lg shadow-lg space-y-4 mb-4">
-      <label for="username" class="block text-sm font-medium text-gray-700">Your Name</label>
-      <input id="username" type="text" class="w-full p-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-pink-400 text-gray-700" placeholder="Enter your name">
-      
-      <label for="user-wish" class="block text-sm font-medium text-gray-700">Your Wish</label>
-      <textarea id="user-wish" rows="4" class="w-full p-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-pink-400 text-gray-700" placeholder="Write your wish here..."></textarea>
-      
-      <button onclick="addWish()" class="w-full bg-gradient-to-r from-pink-500 to-purple-500 text-white px-4 py-2 rounded-lg focus:ring-4 focus:ring-pink-300 hover:shadow-lg">
-        Submit Wish
-      </button>
-    </div>
-
-    <!-- Total Wishes Count -->
-    <div id="wish-count" class="text-sm font-medium text-gray-600 mb-4">
-      Total Wishes: 0
-    </div>
-
-    <!-- User Submitted Wishes -->
-    <div id="user-wishes"></div>
-
-    <!-- Footer -->
-    <div class="mt-6 text-center text-xs text-gray-500">
-      <p>Created by George with love. Mum, you're the best. ❤</p>
-    </div>
-  </div>
-
-  <script>
     // Automatic Image Slider
     let currentSlide = 0;
     function showSlides() {
