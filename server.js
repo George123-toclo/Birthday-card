@@ -2,9 +2,14 @@ const express = require('express');
 const path = require('path');
 const fs = require('fs');
 const crypto = require('crypto-js');
+const http = require('http');
+const WebSocket = require('ws');
 
 const app = express();
-const port = 5500;
+const server = http.createServer(app);
+const wss = new WebSocket.Server({ server });
+
+const port = 5200;
 const wishesFile = path.join(__dirname, 'wishes.json');
 const secretKey = '12345'; // Replace with a secure key
 
@@ -69,6 +74,13 @@ app.post('/wishes', (req, res) => {
     wishes.push({ username, wish, token });
     writeToFile(wishes);
 
+    // Broadcast the new wish to all connected clients
+    wss.clients.forEach(client => {
+      if (client.readyState === WebSocket.OPEN) {
+        client.send(JSON.stringify({ username, wish, token }));
+      }
+    });
+
     res.json({ success: true });
   } catch (error) {
     console.error('Error writing to wishes file:', error);
@@ -93,6 +105,14 @@ app.put('/wishes', (req, res) => {
     if (wishIndex !== -1) {
       wishes[wishIndex].wish = newWish;
       writeToFile(wishes);
+
+      // Broadcast the updated wish to all connected clients
+      wss.clients.forEach(client => {
+        if (client.readyState === WebSocket.OPEN) {
+          client.send(JSON.stringify({ username: wishes[wishIndex].username, wish: newWish, token }));
+        }
+      });
+
       res.json({ success: true });
     } else {
       res.json({ success: false, message: 'Wish not found' });
@@ -103,6 +123,6 @@ app.put('/wishes', (req, res) => {
   }
 });
 
-app.listen(port, () => {
+server.listen(port, () => {
   console.log(`Server running at http://localhost:${port}`);
 });
