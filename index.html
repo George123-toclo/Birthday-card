@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Responsive Birthday Card</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    // Countdown Timer and Birthday Status
+    function startCountdown() {
+      const now = new Date();
+      const currentYear = now.getFullYear();
+      let birthdayDate = new Date(`January 2, ${currentYear} 00:00:00`).getTime();
+
+      // Check if the birthday has passed, and update to next year if necessary
+      if (now.getTime() > birthdayDate) {
+        birthdayDate = new Date(`January 2, ${currentYear + 1} 00:00:00`).getTime();
+      }
+
+      const countdownInterval = setInterval(function () {
+        const now = new Date().getTime();
+        const distance = birthdayDate - now;
+
+        // Display birthday status
+        const birthdayStatus = document.getElementById('birthday-status');
+        if (distance <= 0) {
+          birthdayStatus.innerHTML = "🎉 Active Event: It's your birthday today! 🎂";
+          document.getElementById('countdown').innerHTML = '🎉 Happy Birthday! 🎂';
+          clearInterval(countdownInterval);
+          // Restart countdown for the next year
+          setTimeout(() => startCountdown(), 1000);
+        } else {
+          birthdayStatus.innerHTML = "Upcoming Event: Your birthday is on January 2.";
+          const days = Math.floor(distance / (1000 * 60 * 60 * 24));
+          const hours = Math.floor((distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+          const minutes = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
+          const seconds = Math.floor((distance % (1000 * 60)) / 1000);
+          document.getElementById('countdown').innerHTML = `${days}d ${hours}h ${minutes}m ${seconds}s`;
+        }
+      }, 1000);
+    }
+
+    // Function to add user wishes
+    function addWish() {
+      const username = document.getElementById('username').value.trim();
+      const userWish = document.getElementById('user-wish').value.trim();
+      if (username && userWish) {
+        const timeSent = new Date().toLocaleTimeString();
+        const wishContainer = document.getElementById('user-wishes');
+        const newWish = document.createElement('div');
+        newWish.classList.add(
+          'bg-white/40',
+          'backdrop-blur-lg',
+          'p-6',
+          'rounded-lg',
+          'shadow-lg',
+          'text-center',
+          'space-y-3',
+          'mb-4',
+          'flex',
+          'flex-col',
+          'items-center',
+          'justify-center'
+        );
+        newWish.innerHTML = `
+          <div class="text-pink-500 text-3xl mb-2">
+            <i class="fas fa-birthday-cake"></i>
+          </div>
+          <p class="text-sm sm:text-base text-gray-600 font-semibold">${username} says:</p>
+          <p class="text-sm sm:text-base text-gray-600">${userWish}</p>
+          <p class="text-xs text-gray-400">Sent at: ${timeSent}</p>
+        `;
+        wishContainer.appendChild(newWish);
+        document.getElementById('username').value = ''; // Clear username input
+        document.getElementById('user-wish').value = ''; // Clear wish input
+      }
+    }
+
+    window.onload = startCountdown;
+  </script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@600&display=swap');
+
+    body {
+      font-family: 'Poppins', sans-serif;
+      background: linear-gradient(to bottom right, #fbc2eb, #a18cd1, #a1c4fd, #c2e59c);
+      background-attachment: fixed;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 1rem;
+    }
+
+    .fade-slide {
+      display: flex;
+      position: relative;
+      overflow: hidden;
+      border-radius: 1rem;
+    }
+
+    .fade-slide img {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      opacity: 0;
+      transition: opacity 1.5s ease-in-out;
+    }
+
+    .fade-slide img.active {
+      opacity: 1;
+    }
+  </style>
+</head>
+<body>
+  <!-- Glass Card -->
+  <div class="relative bg-white/30 backdrop-blur-lg shadow-lg rounded-xl p-6 sm:p-8 w-full max-w-md sm:max-w-lg md:max-w-xl text-center">
+
+    <!-- Image Slider -->
+    <div class="fade-slide h-56 sm:h-64 md:h-72 mb-4">
+      <img src="FB_IMG_1735708208977.jpg" alt="Slide 1" class="active">
+      <img src="FB_IMG_1733355354534.jpg" alt="Slide 2">
+      <img src="FB_IMG_1733355385479.jpg" alt="Slide 3">
+    </div>
+
+    <!-- User Info Section -->
+    <div class="text-center space-y-2 mb-4">
+      <h2 class="text-lg sm:text-xl md:text-2xl font-bold text-gray-800">🎉 Happy Birthday, Elizabeth Blay Torbor! 🎂</h2>
+      <p class="text-xs sm:text-sm text-gray-600">Birthday: January 2</p>
+      <p id="birthday-status" class="text-sm sm:text-base font-medium text-pink-500 mt-2"></p>
+    </div>
+
+    <!-- Divider -->
+    <hr class="my-4" />
+
+    <!-- Countdown Section -->
+    <div class="text-center text-lg sm:text-xl font-semibold text-gray-700 mb-5">
+      <p class="mb-2">Countdown to Birthday:</p>
+      <p id="countdown" class="text-2xl text-pink-600 font-bold"></p>
+    </div>
+
+    <!-- Add Wishes Section -->
+    <div class="bg-white/40 backdrop-blur-lg p-6 rounded-lg shadow-lg space-y-4 mb-4">
+      <label for="username" class="block text-sm font-medium text-gray-700">Your Name</label>
+      <input id="username" type="text" class="w-full p-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-pink-400 text-gray-700" placeholder="Enter your name">
+      
+      <label for="user-wish" class="block text-sm font-medium text-gray-700">Your Wish</label>
+      <textarea id="user-wish" rows="4" class="w-full p-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-pink-400 text-gray-700" placeholder="Write your wish here..."></textarea>
+      
+      <button onclick="addWish()" class="w-full bg-gradient-to-r from-pink-500 to-purple-500 text-white px-4 py-2 rounded-lg focus:ring-4 focus:ring-pink-300 hover:shadow-lg">
+        Submit Wish
+      </button>
+    </div>
+
+    <!-- User Submitted Wishes -->
+    <div id="user-wishes"></div>
+
+    <!-- Footer -->
+    <div class="mt-6 text-center text-xs text-gray-500">
+      <p>Created by George with love. Mum, you're the best. ❤️</p>
+    </div>
+  </div>
+
+  <script>
+    // Automatic Image Slider
+    let currentSlide = 0;
+    function showSlides() {
+      const slides = document.querySelectorAll('.fade-slide img');
+      slides.forEach((slide, index) => {
+        slide.classList.remove('active');
+        if (index === currentSlide) {
+          slide.classList.add('active');
+        }
+      });
+      currentSlide = (currentSlide + 1) % slides.length;
+    }
+    setInterval(showSlides, 3000); // Change image every 3 seconds
+  </script>
+</body>
+</html>
