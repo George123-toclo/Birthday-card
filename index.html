@@ -94,19 +94,15 @@
 
     <!-- User Info Section -->
     <div class="text-center space-y-2 mb-4">
-      <h2 class="text-lg sm:text-xl md:text-2xl font-bold text-gray-800">🎉 Happy Birthday, Elizabeth Blay Torbor! 🎂</h2>
+      <h2 class="text-lg sm:text-xl md:text-2xl font-bold text-gray-800">
+        🎉 Happy Birthday, Elizabeth Blay Torbor! 🎂
+      </h2>
       <p class="text-xs sm:text-sm text-gray-600">Birthday: January 2</p>
-      <p id="birthday-status" class="text-sm sm:text-base font-medium text-pink-500 mt-2"></p>
+      <p id="" class="text-sm sm:text-base font-medium text-pink-500 mt-2"></p>
     </div>
 
     <!-- Divider -->
     <hr class="my-4" />
-
-    <!-- Countdown Section -->
-    <div class="text-center text-lg sm:text-xl font-semibold text-gray-700 mb-5">
-      <p class="mb-2">Countdown to Birthday:</p>
-      <p id="countdown" class="text-2xl text-pink-600 font-bold"></p>
-    </div>
 
     <!-- Add Wishes Section -->
     <div class="bg-white/40 backdrop-blur-lg p-6 rounded-lg shadow-lg space-y-4 mb-4">
@@ -122,12 +118,10 @@
     </div>
 
     <!-- Total Wishes Count -->
-    <div id="wish-count" class="text-sm font-medium text-gray-600 mb-4">
-      Total Wishes: 0
-    </div>
+    <div id="wish-count" class="text-lg sm:text-xl font-semibold text-gray-700 mb-5"></div>
 
     <!-- User Submitted Wishes -->
-    <div id="user-wishes"></div>
+    <div id="user-wishes" class="space-y-4"></div>
 
     <!-- Footer -->
     <div class="mt-6 text-center text-xs text-gray-500">
@@ -202,41 +196,60 @@
       }, 1000);
     }
 
+    // Function to update the total count of wishes
+    function updateWishCount(count) {
+      const wishCountElement = document.getElementById('wish-count');
+      wishCountElement.textContent = `Total Wishes: ${count}`;
+    }
+
     // Function to fetch and display wishes
     async function fetchWishes() {
-      const response = await fetch('/wishes');
-      const wishes = await response.json();
-      const wishContainer = document.getElementById('user-wishes');
-      wishes.forEach(wish => {
-        const newWish = document.createElement('div');
-        newWish.classList.add(
-          'bg-white/40',
-          'backdrop-blur-lg',
-          'p-6',
-          'rounded-lg',
-          'shadow-lg',
-          'text-center',
-          'space-y-3',
-          'mb-4',
-          'flex',
-          'flex-col',
-          'items-center',
-          'justify-center'
-        );
-        newWish.innerHTML = `
-          <div class="text-pink-500 text-3xl mb-2">
-            <i class="fas fa-birthday-cake"></i>
-          </div>
-          <p class="text-sm sm:text-base text-gray-600 font-semibold">${wish.username} says:</p>
-          <p class="wish-text text-sm sm:text-base text-gray-600">${wish.wish}</p>
-          <p class="text-xs text-gray-400">Sent at: ${new Date().toLocaleTimeString()}</p>
-          <button onclick="editWish(this, '${wish.token}')" class="bg-pink-500 text-white px-4 py-2 rounded-lg text-xs">Edit</button>
-        `;
-        wishContainer.appendChild(newWish);
-      });
-      totalWishes = wishes.length;
-      updateWishCount();
+      try {
+        const response = await axios.get('/wishes');
+        const wishes = response.data;
+        const wishContainer = document.getElementById('user-wishes');
+        wishContainer.innerHTML = ''; // Clear existing wishes
+
+        wishes.forEach(wish => {
+          const newWish = document.createElement('div');
+          newWish.classList.add(
+            'bg-white/40',
+            'backdrop-blur-lg',
+            'p-6',
+            'rounded-lg',
+            'shadow-lg',
+            'text-center',
+            'space-y-3',
+            'mb-4',
+            'flex',
+            'flex-col',
+            'items-center',
+            'justify-center'
+          );
+          newWish.setAttribute('data-token', wish.token);
+          newWish.innerHTML = `
+            <div class="text-pink-500 text-3xl mb-2">
+              <i class="fas fa-birthday-cake"></i>
+            </div>
+            <p class="text-sm sm:text-base text-gray-600 font-semibold">${wish.username} says:</p>
+            <p class="wish-text text-sm sm:text-base text-gray-600">${wish.wish}</p>
+            <p class="text-xs text-gray-400">Sent at: ${new Date().toLocaleTimeString()}</p>
+            <button onclick="editWish(this, '${wish.token}')" class="bg-pink-500 text-white px-4 py-2 rounded-lg text-xs">Edit</button>
+          `;
+          wishContainer.appendChild(newWish);
+        });
+
+        // Update the total count of wishes
+        updateWishCount(wishes.length);
+      } catch (error) {
+        console.error('Error fetching wishes:', error);
+      }
     }
+
+    window.onload = () => {
+      startCountdown();
+      fetchWishes();
+    };
 
     // Function to show the progress bar
     function showProgressBar() {
@@ -341,11 +354,6 @@
       document.getElementById('edit-modal').classList.add('hidden');
       document.getElementById('main-content').classList.remove('blurred');
     }
-
-    window.onload = () => {
-      startCountdown();
-      fetchWishes();
-    };
 
     // Automatic Image Slider
     let currentSlide = 0;

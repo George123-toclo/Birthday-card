@@ -1,17 +1,50 @@
 const express = require('express');
 const path = require('path');
-const fs = require('fs');
-const crypto = require('crypto-js');
 const http = require('http');
 const { Server } = require('socket.io');
+const mongoose = require('mongoose');
 
 const app = express();
 const server = http.createServer(app);
 const io = new Server(server);
 
 const port = 5200;
-const wishesFile = path.join(__dirname, 'wishes.json');
-const secretKey = '12345'; // Replace with a secure key
+
+// MongoDB credentials
+const MONGODB_USERNAME = 'morristoclo';
+const MONGODB_PASSWORD = '7034Toclomorris208';
+const MONGODB_CLUSTER = 'bn.pfbmk.mongodb.net';
+const MONGODB_DATABASE = 'Wishes';
+
+const constructMongoURI = () => {
+  return `mongodb+srv://${encodeURIComponent(MONGODB_USERNAME)}:${encodeURIComponent(MONGODB_PASSWORD)}@${MONGODB_CLUSTER}/${MONGODB_DATABASE}?retryWrites=true&w=majority&appName=BN`;
+};
+
+const connectDB = async () => {
+  try {
+    const mongoURI = constructMongoURI();
+
+    const conn = await mongoose.connect(mongoURI, {
+      useNewUrlParser: true,
+      useUnifiedTopology: true,
+    });
+
+    console.log(`MongoDB Connected: ${conn.connection.host}`);
+  } catch (error) {
+    console.error('MongoDB connection error:', error);
+    process.exit(1);
+  }
+};
+
+connectDB();
+
+const wishSchema = new mongoose.Schema({
+  username: String,
+  wish: String,
+  token: String
+});
+
+const Wish = mongoose.model('Wish', wishSchema);
 
 app.use(express.static(path.join(__dirname, 'public')));
 app.use(express.json());
@@ -24,93 +57,60 @@ app.use((req, res, next) => {
   next();
 });
 
-// Initialize the wishes file if it doesn't exist or is empty
-if (!fs.existsSync(wishesFile) || fs.readFileSync(wishesFile, 'utf8').trim() === '') {
-  const initialData = crypto.AES.encrypt(JSON.stringify([]), secretKey).toString();
-  fs.writeFileSync(wishesFile, initialData);
-}
-
-// Helper function to write to the wishes file
-const writeToFile = (data) => {
-  const encryptedData = crypto.AES.encrypt(JSON.stringify(data), secretKey).toString();
-  fs.writeFileSync(wishesFile, encryptedData);
-};
-
 // Serve the index.html file
 app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, 'index.html'));
 });
 
 // Get wishes
-app.get('/wishes', (req, res) => {
+app.get('/wishes', async (req, res) => {
   try {
-    const encryptedData = fs.readFileSync(wishesFile, 'utf8');
-    if (!encryptedData.trim()) {
-      return res.json([]);
-    }
-    const decryptedBytes = crypto.AES.decrypt(encryptedData, secretKey);
-    const decryptedData = decryptedBytes.toString(crypto.enc.Utf8);
-    const wishes = JSON.parse(decryptedData);
+    const wishes = await Wish.find();
+    console.log('Wishes retrieved:', wishes);
     res.json(wishes);
   } catch (error) {
-    console.error('Error reading wishes file:', error);
-    res.status(500).json({ error: 'Failed to read wishes file' });
+    console.error('Error reading wishes from MongoDB:', error);
+    res.status(500).json({ error: 'Failed to read wishes' });
   }
 });
 
 // Add a new wish
-app.post('/wishes', (req, res) => {
+app.post('/wishes', async (req, res) => {
   const { username, wish, token } = req.body;
-  let wishes = [];
 
   try {
-    const encryptedData = fs.readFileSync(wishesFile, 'utf8');
-    if (encryptedData.trim()) {
-      const decryptedBytes = crypto.AES.decrypt(encryptedData, secretKey);
-      const decryptedData = decryptedBytes.toString(crypto.enc.Utf8);
-      wishes = JSON.parse(decryptedData);
-    }
-
-    wishes.push({ username, wish, token });
-    writeToFile(wishes);
+    const newWish = new Wish({ username, wish, token });
+    await newWish.save();
+    console.log('New wish added:', newWish);
 
     // Broadcast the new wish to all connected clients
     io.emit('newWish', { username, wish, token });
 
     res.json({ success: true });
   } catch (error) {
-    console.error('Error writing to wishes file:', error);
+    console.error('Error adding wish to MongoDB:', error);
     res.status(500).json({ error: 'Failed to add wish' });
   }
 });
 
 // Edit an existing wish
-app.put('/wishes', (req, res) => {
+app.put('/wishes', async (req, res) => {
   const { token, newWish } = req.body;
-  let wishes = [];
 
   try {
-    const encryptedData = fs.readFileSync(wishesFile, 'utf8');
-    if (encryptedData.trim()) {
-      const decryptedBytes = crypto.AES.decrypt(encryptedData, secretKey);
-      const decryptedData = decryptedBytes.toString(crypto.enc.Utf8);
-      wishes = JSON.parse(decryptedData);
-    }
+    const wish = await Wish.findOneAndUpdate({ token }, { wish: newWish }, { new: true });
+    console.log('Wish updated:', wish);
 
-    const wishIndex = wishes.findIndex(wish => wish.token === token);
-    if (wishIndex !== -1) {
-      wishes[wishIndex].wish = newWish;
-      writeToFile(wishes);
-
+    if (wish) {
       // Broadcast the updated wish to all connected clients
-      io.emit('updateWish', { username: wishes[wishIndex].username, wish: newWish, token });
+      io.emit('updateWish', { username: wish.username, wish: newWish, token });
 
       res.json({ success: true });
     } else {
       res.json({ success: false, message: 'Wish not found' });
     }
   } catch (error) {
-    console.error('Error updating wishes file:', error);
+    console.error('Error updating wish in MongoDB:', error);
     res.status(500).json({ error: 'Failed to update wish' });
   }
 });
