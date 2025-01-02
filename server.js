@@ -41,7 +41,11 @@ connectDB();
 const wishSchema = new mongoose.Schema({
   username: String,
   wish: String,
-  token: String
+  token: String,
+  createdAt: {
+    type: Date,
+    default: Date.now
+  }
 });
 
 const Wish = mongoose.model('Wish', wishSchema);

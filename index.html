@@ -233,7 +233,7 @@
             </div>
             <p class="text-sm sm:text-base text-gray-600 font-semibold">${wish.username} says:</p>
             <p class="wish-text text-sm sm:text-base text-gray-600">${wish.wish}</p>
-            <p class="text-xs text-gray-400">Sent at: ${new Date().toLocaleTimeString()}</p>
+            <p class="text-xs text-gray-400">Sent at: ${new Date(wish.createdAt).toLocaleTimeString()}</p>
             <button onclick="editWish(this, '${wish.token}')" class="bg-pink-500 text-white px-4 py-2 rounded-lg text-xs">Edit</button>
           `;
           wishContainer.appendChild(newWish);
@@ -408,7 +408,7 @@
         </div>
         <p class="text-sm sm:text-base text-gray-600 font-semibold">${wish.username} says:</p>
         <p class="wish-text text-sm sm:text-base text-gray-600">${wish.wish}</p>
-        <p class="text-xs text-gray-400">Sent at: ${new Date().toLocaleTimeString()}</p>
+        <p class="text-xs text-gray-400">Sent at: ${new Date(wish.createdAt).toLocaleTimeString()}</p>
         <button onclick="editWish(this, '${wish.token}')" class="bg-pink-500 text-white px-4 py-2 rounded-lg text-xs">Edit</button>
       `;
       wishContainer.appendChild(newWish);
