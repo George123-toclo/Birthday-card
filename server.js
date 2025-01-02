@@ -77,19 +77,14 @@ app.get('/wishes', async (req, res) => {
 // Add a new wish
 app.post('/wishes', async (req, res) => {
   const { username, wish, token } = req.body;
+  const newWish = new Wish({ username, wish, token });
 
   try {
-    const newWish = new Wish({ username, wish, token });
     await newWish.save();
-    console.log('New wish added:', newWish);
-
-    // Broadcast the new wish to all connected clients
-    io.emit('newWish', { username, wish, token });
-
-    res.json({ success: true });
+    io.emit('newWish', newWish);
+    res.status(200).send('Wish added successfully.');
   } catch (error) {
-    console.error('Error adding wish to MongoDB:', error);
-    res.status(500).json({ error: 'Failed to add wish' });
+    res.status(500).send('Failed to add wish.');
   }
 });
 

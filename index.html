@@ -274,19 +274,23 @@
 
         showProgressBar(); // Show progress bar
 
-        const response = await fetch('/wishes', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({ username, wish: userWish, token: userToken })
-        });
+        try {
+          const response = await axios.post('/wishes', {
+            username,
+            wish: userWish,
+            token: userToken
+          });
 
-        hideProgressBar(); // Hide progress bar
+          hideProgressBar(); // Hide progress bar
 
-        if (response.ok) {
-          document.getElementById('username').value = ''; // Clear username input
-          document.getElementById('user-wish').value = ''; // Clear wish input
+          if (response.status === 200) {
+            document.getElementById('username').value = ''; // Clear username input
+            document.getElementById('user-wish').value = ''; // Clear wish input
+            fetchWishes(); // Fetch and update wishes
+          }
+        } catch (error) {
+          console.error('Error adding wish:', error);
+          hideProgressBar(); // Hide progress bar
         }
       }
     }
@@ -313,26 +317,31 @@
       if (newWish !== '') {
         showProgressBar(); // Show progress bar
 
-        const response = await fetch('/wishes', {
-          method: 'PUT',
-          headers: {
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({ token: currentEditToken, newWish })
-        });
+        try {
+          const response = await axios.put('/wishes', {
+            token: currentEditToken,
+            newWish
+          });
 
-        hideProgressBar(); // Hide progress bar
+          hideProgressBar(); // Hide progress bar
 
-        if (response.ok) {
-          closeEditModal();
-        } else {
+          if (response.status === 200) {
+            closeEditModal();
+            fetchWishes(); // Fetch and update wishes
+          } else {
+            showModal('Failed to update the wish.');
+          }
+        } catch (error) {
+          console.error('Error updating wish:', error);
           showModal('Failed to update the wish.');
+          hideProgressBar(); // Hide progress bar
         }
       }
     }
 
     // Update the total wish count
     function updateWishCount() {
+      const totalWishes = document.querySelectorAll('#user-wishes > div').length;
       document.getElementById('wish-count').textContent = `Total Wishes: ${totalWishes}`;
     }
 
@@ -403,6 +412,9 @@
         <button onclick="editWish(this, '${wish.token}')" class="bg-pink-500 text-white px-4 py-2 rounded-lg text-xs">Edit</button>
       `;
       wishContainer.appendChild(newWish);
+
+      // Update the total count of wishes
+      updateWishCount();
     });
 
     socket.on('updateWish', (wish) => {
