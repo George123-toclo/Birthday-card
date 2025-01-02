@@ -208,6 +208,7 @@
         const response = await axios.get('/wishes');
         const wishes = response.data;
         const wishContainer = document.getElementById('user-wishes');
+        const userToken = localStorage.getItem('userToken');
         wishContainer.innerHTML = ''; // Clear existing wishes
 
         wishes.forEach(wish => {
@@ -234,7 +235,7 @@
             <p class="text-sm sm:text-base text-gray-600 font-semibold">${wish.username} says:</p>
             <p class="wish-text text-sm sm:text-base text-gray-600">${wish.wish}</p>
             <p class="text-xs text-gray-400">Sent at: ${new Date(wish.createdAt).toLocaleTimeString()}</p>
-            <button onclick="editWish(this, '${wish.token}')" class="bg-pink-500 text-white px-4 py-2 rounded-lg text-xs">Edit</button>
+            ${userToken === wish.token ? `<button onclick="editWish(this, '${wish.token}')" class="bg-pink-500 text-white px-4 py-2 rounded-lg text-xs">Edit</button>` : ''}
           `;
           wishContainer.appendChild(newWish);
         });
@@ -386,6 +387,7 @@
 
     socket.on('newWish', (wish) => {
       const wishContainer = document.getElementById('user-wishes');
+      const userToken = localStorage.getItem('userToken');
       const newWish = document.createElement('div');
       newWish.classList.add(
         'bg-white/40',
@@ -409,7 +411,7 @@
         <p class="text-sm sm:text-base text-gray-600 font-semibold">${wish.username} says:</p>
         <p class="wish-text text-sm sm:text-base text-gray-600">${wish.wish}</p>
         <p class="text-xs text-gray-400">Sent at: ${new Date(wish.createdAt).toLocaleTimeString()}</p>
-        <button onclick="editWish(this, '${wish.token}')" class="bg-pink-500 text-white px-4 py-2 rounded-lg text-xs">Edit</button>
+        ${userToken === wish.token ? `<button onclick="editWish(this, '${wish.token}')" class="bg-pink-500 text-white px-4 py-2 rounded-lg text-xs">Edit</button>` : ''}
       `;
       wishContainer.appendChild(newWish);
 
